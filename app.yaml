@@ -1,15 +1,8 @@
-application: hello-flask-app-engine
+application: helloworld
 version: 1
-runtime: python27
+runtime: php55
 api_version: 1
-threadsafe: yes
 
 handlers:
-- url: .*
-  script: main.app
-
-libraries:
-- name: jinja2
-  version: "2.6"
-- name: markupsafe
-  version: "0.15"
+- url: /.*
+  script: helloworld.php
