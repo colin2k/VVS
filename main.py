@@ -2,9 +2,12 @@ import webapp2
 import cgi
 import time
 import urllib
+import logging
 
 from google.appengine.api import users
 from google.appengine.ext import ndb
+from google.appengine.api import mail
+from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
 
 VVS_CHAT_NAME = 'vvs_chat'
 
@@ -84,7 +87,8 @@ class ChatMessage(ndb.Model):
 		self.msg = message
 
 	def __str__(self):
-		return "Von: %s um %s : %s" % (self.sender.username,self.timestamp,self.msg)
+
+		return "%s von %s um %s : %s" % (self.timestamp.strftime("%d.%m.%Y"),self.sender.username,self.timestamp.strftime("%H:%M:%S"),self.msg)
 
 Messages = []
 class MainPage(webapp2.RequestHandler):
@@ -108,7 +112,11 @@ class MainPage(webapp2.RequestHandler):
 				    </div>
 				    <div class="panel-body">
 				        <div class="panel panel-default">
-				            """)
+				        
+				        <div class="panel-heading">
+				        	<h4>%s</h4>
+				        </div>
+				            """ % VVS_CHAT_NAME)
         #global Messages
         #if len(Messages) > 10:
         #	chat = Messages[-10:]
@@ -135,18 +143,57 @@ class MainPage(webapp2.RequestHandler):
 	
 class PostHandler(webapp2.RequestHandler):
 	def post(self):
-		chatter = ChatUser(parent=chat_key(VVS_CHAT_NAME))
-		chatter.setUsername(self.request.get("username"))
-		msg = ChatMessage(parent=chat_key(VVS_CHAT_NAME))
-		msg.setUser(chatter)
-		msg.setMessage(self.request.get("message"))
-		msg.put()
+		if len(self.request.get("message")) > 1:
+			chatter = ChatUser(parent=chat_key(VVS_CHAT_NAME))
+			username = 'anonymous'
+			if len(self.request.get("username")) > 1:
+				username = self.request.get("username")
+			chatter.setUsername(username)
+			msg = ChatMessage(parent=chat_key(VVS_CHAT_NAME))
+			msg.setUser(chatter)
+			msg.setMessage(self.request.get("message"))
+			msg.put()
+
 		#global Messages
 		#Messages.append(ChatMessage(chatter,msg))
 		self.redirect('/')
 
+class EmailHandler(webapp2.RequestHandler):
+	def get(self):
+		sender_address = "Oliver Colin Sauer <ocolins@gmail.com>"
+		my_address = "ocolins@gmail.com"
+		subject = "VVS-Chat-Message"
+		content = "Dies ist eine Email aus dem VVS-Chat"
+		mail.send_mail(sender_address,my_address,subject,content)
+		self.response.write('Email wurde gesendet')
+
+		
+class IncomingMailHandler(InboundMailHandler):
+	def receive(self,mail_message):
+		chatter = ChatUser(parent=chat_key(VVS_CHAT_NAME))
+		chatter.setUsername(mail_message.sender)
+		msg = ChatMessage(parent=chat_key(VVS_CHAT_NAME))
+		msg.setUser(chatter)
+		text_bodies = mail_message.bodies('text/plain')
+		html_bodies = mail_message.bodies('text/html')
+		email_body = ''
+		for content_type,body in html_bodies:
+			email_body += body.decode()
+		for content_type,body in text_bodies:
+			email_body += body.decode()
+
+		sender_address = "Oliver Colin Sauer <ocolins@gmail.com>"
+		my_address = "ocolins@gmail.com"
+		subject = "VVS-Chat-Message von " + mail_message.sender
+		mail.send_mail(sender_address,my_address,subject,email_body)
+
+		msg.setMessage(email_body)
+		msg.put()
+		logging.info('Received email from'+mail_message.sender)
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/post', PostHandler),
+    ('/email', EmailHandler),
+    IncomingMailHandler.mapping()
 ], debug=True)

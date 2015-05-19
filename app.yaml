@@ -8,6 +8,13 @@ handlers:
 - url: /.*
   script: main.app
 
+- url: /_ah/mail/.+
+  script: main.app
+  login: admin
+
 libraries:
 - name: webapp2
   version: latest
+
+inbound_services:
+- mail
