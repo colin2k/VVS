@@ -1,0 +1,6 @@
+indexes:
+- kind: ChatMessage
+  ancestor: yes
+  properties:
+  - name: timestamp
+    direction: desc
