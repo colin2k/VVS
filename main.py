@@ -91,6 +91,7 @@ class ChatMessage(ndb.Model):
 		return "%s von %s um %s : %s" % (self.timestamp.strftime("%d.%m.%Y"),self.sender.username,self.timestamp.strftime("%H:%M:%S"),self.msg)
 
 Messages = []
+ServerTime = time.strftime("%d.%m.%Y(%H:%M:%S)")
 class MainPage(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'text/html'
@@ -139,7 +140,7 @@ class MainPage(webapp2.RequestHandler):
 				    <div class="panel-footer">Server date and time: %s </div>
 				</div>
 				</body>
-				</html>""" % time.strftime("%d.%m.%Y(%H:%M:%S)"))
+				</html>""" % ServerTime)
 	
 class PostHandler(webapp2.RequestHandler):
 	def post(self):
